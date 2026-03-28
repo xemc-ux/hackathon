@@ -21,7 +21,7 @@ def calculate_angle(p1, p2):
 
 cap = cv2.VideoCapture(0)
 
-print("Starting Posture Tracker... Press 'q' to quit.")
+print("starting posture tracker...press 'q' to quit.")
 
 timeBadSidePosture = 0
 
@@ -51,7 +51,7 @@ while cap.isOpened():
         torso_angle = calculate_angle(sho_pos, hip_pos)
 
         color = (0, 255, 0)
-        status = "Good Posture"
+        status = "GOOD POSTURE"
 
         if neck_angle > 20 or torso_angle > 15:
             color = (0, 0, 255)
@@ -61,11 +61,11 @@ while cap.isOpened():
             else:
                 checkElapsed = time.time() - timeBadSidePosture
                 if checkElapsed > 30:
-                    status = "BAD POSTURE! Please correct!"
+                    status = "BAD POSTURE! please correct!"
                     print("send notif")
         else:
             color = (0, 255, 0)
-            status = "Good Posture"
+            status = "GOOD POSTURE"
 
 
 
@@ -76,9 +76,9 @@ while cap.isOpened():
             cv2.circle(frame, pos, 7, (255, 255, 255), -1)
             cv2.circle(frame, pos, 8, color, 2)
 
-        cv2.putText(frame, f"Neck Angle: {int(neck_angle)} deg", (20, 50), 
+        cv2.putText(frame, f"neck angle: {int(neck_angle)} deg", (20, 50), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.putText(frame, f"Torso Angle: {int(torso_angle)} deg", (20, 80), 
+        cv2.putText(frame, f"torso angle: {int(torso_angle)} deg", (20, 80), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         cv2.putText(frame, status, (20, 120), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
