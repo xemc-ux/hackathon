@@ -62,7 +62,7 @@ while cap.isOpened():
                 checkElapsed = time.time() - timeBadSidePosture
                 if checkElapsed > 30:
                     status = "BAD POSTURE! please correct!"
-                    print("send notif")
+                    print("send notif. you are hunching over.")
         else:
             color = (0, 255, 0)
             status = "GOOD POSTURE"
