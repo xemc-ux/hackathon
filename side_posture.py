@@ -18,7 +18,7 @@ def calculate_angle(p1, p2):
     angle = math.degrees(radians)
     return abs(angle)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 print("Starting Posture Tracker... Press 'q' to quit.")
 
