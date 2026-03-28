@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import math
+import time
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
@@ -18,9 +19,11 @@ def calculate_angle(p1, p2):
     angle = math.degrees(radians)
     return abs(angle)
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 print("Starting Posture Tracker... Press 'q' to quit.")
+
+timeBadSidePosture = 0
 
 while cap.isOpened():
     success, frame = cap.read()
@@ -52,7 +55,19 @@ while cap.isOpened():
 
         if neck_angle > 20 or torso_angle > 15:
             color = (0, 0, 255)
-            status = "BAD POSTURE!"
+            status = f"BAD POSTURE! for {time.time() - timeBadSidePosture:.1f} sec"
+            if timeBadSidePosture == 0:
+                timeBadSidePosture = time.time()
+            else:
+                checkElapsed = time.time() - timeBadSidePosture
+                if checkElapsed > 30:
+                    status = "BAD POSTURE! Please correct!"
+                    print("send notif")
+        else:
+            color = (0, 255, 0)
+            status = "Good Posture"
+
+
 
         cv2.line(frame, ear_pos, sho_pos, color, 3)
         cv2.line(frame, sho_pos, hip_pos, color, 3)
