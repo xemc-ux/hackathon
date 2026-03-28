@@ -1,0 +1,82 @@
+import cv2
+import mediapipe as mp
+import math
+
+mp_pose = mp.solutions.pose
+pose_model = mp_pose.Pose(
+    static_image_mode=False,
+    model_complexity=1,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5
+)
+mp_drawing = mp.solutions.drawing_utils
+
+cap = cv2.VideoCapture(0)
+
+# This will store your 'relaxed' state
+baseline_l_gap = None
+baseline_r_gap = None
+
+print("Starting... Sit up straight for 2 seconds to calibrate.")
+
+while cap.isOpened():
+    success, frame = cap.read()
+    if not success: break
+
+    frame = cv2.flip(frame, 1)
+    h, w, _ = frame.shape
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = pose_model.process(rgb_frame)
+
+    if results.pose_landmarks:
+        lm = results.pose_landmarks.landmark
+
+        # Pixel coordinates for vertical gaps
+        # Gap = Shoulder Y - Ear Y (Higher value means lower on screen)
+        curr_l_gap = lm[11].y - lm[7].y
+        curr_r_gap = lm[12].y - lm[8].y
+
+        # INITIAL CALIBRATION: Set the first stable frame as 'Good Posture'
+        if baseline_l_gap is None:
+            baseline_l_gap = curr_l_gap
+            baseline_r_gap = curr_r_gap
+
+        # 1. UNEVEN SHOULDERS (Original Logic)
+        # Vertical difference between the two shoulders
+        sh_diff = abs(lm[11].y - lm[12].y)
+
+        # 2. SHOULDER ELEVATION (Calibrated Logic)
+        # If current gap is 25% smaller than your starting gap, you are shrugging
+        l_shrug = curr_l_gap < (baseline_l_gap * 0.75)
+        r_shrug = curr_r_gap < (baseline_r_gap * 0.75)
+
+        # Thresholds
+        is_shrugging = l_shrug or r_shrug
+        is_uneven = sh_diff > 0.03 # Original sensitivity
+
+        if is_shrugging:
+            status, color = "SHOULDERS TOO HIGH!", (0, 0, 255)
+        elif is_uneven:
+            status, color = "UNEVEN SHOULDERS!", (0, 165, 255)
+        else:
+            status, color = "GOOD POSTURE", (0, 255, 0)
+
+        # Overlay all landmarks
+        mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+        # UI text
+        cv2.putText(frame, status, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
+        cv2.putText(frame, "Press 'r' to Reset Calibration", (20, h - 20), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    cv2.imshow('Calibrated Posture Monitor', frame)
+    
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
+        break
+    elif key == ord('r'): # Reset baseline if it feels off
+        baseline_l_gap = None
+        print("Recalibrating...")
+
+cap.release()
+cv2.destroyAllWindows()
