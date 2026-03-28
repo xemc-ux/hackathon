@@ -42,13 +42,12 @@ SHRUG_RATIO = 0.90
  
 # durations
 NARROWING_DURATION = 10
-LOW_EAR_DURATION = 10
-HEAD_DURATION = 10
+LOW_EAR_DURATION   = 10
+HEAD_DURATION      = 10
 LOW_BLINK_DURATION = 10
-SHRUG_DURATION = 10
+SHRUG_DURATION     = 10
  
-# notification timing
-NOTIF_BAD_DURATION = 10
+# notification cooldown per signal
 NOTIF_COOLDOWN = 60
  
 BAR_W = 220
@@ -118,25 +117,29 @@ def divider(frame, title, y):
     txt(frame, title, (8, y + 14), (180, 180, 180), scale=0.5, bold=True)
  
  
+def check_notif(signal_full, last_notif, now):
+    """returns updated last_notif and whether to fire notification."""
+    if signal_full and now - last_notif >= NOTIF_COOLDOWN:
+        return now, True
+    return last_notif, False
+ 
+ 
 # state
-low_ear_since = None
-head_bad_since = None
+low_ear_since   = None
+head_bad_since  = None
 low_blink_since = None
-shrug_since = None
-blink_times = []
-in_blink = False
-baseline_l_gap = None
-baseline_r_gap = None
-start_time = time.time()
+shrug_since     = None
+blink_times     = []
+in_blink        = False
+baseline_l_gap  = None
+baseline_r_gap  = None
+start_time      = time.time()
  
-fatigue_bad_since = None
-posture_bad_since = None
-last_fatigue_notif = 0
-last_posture_notif = 0
- 
-# notification flags
-send_fatigue_notif = False
-send_posture_notif = False
+# per-signal notification timestamps
+last_notif_ear   = 0
+last_notif_head  = 0
+last_notif_blink = 0
+last_notif_shrug = 0
  
 cap = cv2.VideoCapture(1)
 print("sit up straight to calibrate. press r to recalibrate, q to quit.")
@@ -162,8 +165,6 @@ with face_mesh, pose_model:
         strain_secs = head_secs = blink_low_secs = shrug_secs = 0
         fatigue_status, fatigue_color = "no fatigue apparent", (0, 220, 100)
         posture_status, posture_color = "calibrating...", (150, 150, 150)
-        send_fatigue_notif = False
-        send_posture_notif = False
  
         # fatigue (face mesh)
         if face_res.multi_face_landmarks:
@@ -240,7 +241,7 @@ with face_mesh, pose_model:
  
         # fatigue section
         divider(frame, "FATIGUE", 6)
-        b1 = draw_bar(frame, "low EAR  ", strain_secs,LOW_EAR_DURATION, 15, 28)
+        b1 = draw_bar(frame, "low EAR  ", strain_secs, LOW_EAR_DURATION, 15, 28)
         b2 = draw_bar(frame, "head tilt", head_secs, HEAD_DURATION, 15, 58)
         b3 = draw_bar(frame, "low blink", blink_low_secs, LOW_BLINK_DURATION, 15, 88)
  
@@ -248,7 +249,7 @@ with face_mesh, pose_model:
         if any_fatigue:
             fatigue_status, fatigue_color = "fatigue detected. take a break.", (0, 0, 255)
         elif strain_secs >= NARROWING_DURATION:
-            fatigue_status, fatigue_color = "eyes narrowing...monitoring",        (0, 165, 255)
+            fatigue_status, fatigue_color = "eyes narrowing...monitoring", (0, 165, 255)
  
         txt(frame, fatigue_status, (15, 118), fatigue_color, scale=0.6, bold=True)
  
@@ -264,35 +265,25 @@ with face_mesh, pose_model:
         if shrug_secs >= SHRUG_DURATION:
             posture_status, posture_color = "shoulders too high. relax them.", (0, 0, 255)
         elif baseline_l_gap is not None:
-            posture_status, posture_color = "good posture",                     (0, 220, 100)
+            posture_status, posture_color = "good posture", (0, 220, 100)
  
         txt(frame, posture_status, (15, 215), posture_color, scale=0.6, bold=True)
         txt(frame, "r = recalibrate   q = quit", (15, 240), (100, 100, 100), scale=0.42)
  
-        # notification logic
-        if any_fatigue:
-            fatigue_bad_since = fatigue_bad_since or now
-            if (now - fatigue_bad_since >= NOTIF_BAD_DURATION and
-                    now - last_fatigue_notif >= NOTIF_COOLDOWN):
-                send_fatigue_notif = True
-                last_fatigue_notif = now
-        else:
-            fatigue_bad_since = None
+        # per-signal notification logic
+        last_notif_ear, fire_ear   = check_notif(b1, last_notif_ear,   now)
+        last_notif_head, fire_head  = check_notif(b2, last_notif_head,  now)
+        last_notif_blink, fire_blink = check_notif(b3, last_notif_blink, now)
+        last_notif_shrug, fire_shrug = check_notif(p1, last_notif_shrug, now)
  
-        if any_posture:
-            posture_bad_since = posture_bad_since or now
-            if (now - posture_bad_since >= NOTIF_BAD_DURATION and
-                    now - last_posture_notif >= NOTIF_COOLDOWN):
-                send_posture_notif = True
-                last_posture_notif = now
-        else:
-            posture_bad_since = None
- 
-        # use send_fatigue_notif / send_posture_notif here to trigger alerts
-        if send_fatigue_notif:
-            print("notif: fatigue detected")
-        if send_posture_notif:
-            print("notif: poor posture detected")
+        if fire_ear:
+            print("notif: low EAR. your eyes are narrowing. you may be fatigued.")
+        if fire_head:
+            print("notif: head tilt detected. adjust your head position.")
+        if fire_blink:
+            print("notif: low blink rate. remember to blink more often.")
+        if fire_shrug:
+            print("notif: shoulders too high. relax your shoulders.")
  
         cv2.imshow("Fatigue & Posture Monitor", frame)
  
@@ -308,3 +299,4 @@ with face_mesh, pose_model:
 cap.release()
 cv2.destroyAllWindows()
 cv2.waitKey(1)
+ 
