@@ -1,20 +1,13 @@
-"""
-AL-I backend — dual-camera fatigue & posture monitor
-1. Camera 0 (iPhone/continuity, side view): side posture (neck/torso angles)
-2. Camera 1 (MacBook, front view): fatigue (EAR, blink, head tilt) + shrug
-landmarks drawn by MediaPipe's own drawing utils on the frame, streamed as MJPEG.
-run: python ali_backend.py
-"""
 import os, cv2, mediapipe as mp, numpy as np, math, time, json, threading, subprocess
 from flask import Flask, Response, jsonify, request
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "ali-secret"
 
-mp_drawing        = mp.solutions.drawing_utils
+mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
-mp_face_mesh      = mp.solutions.face_mesh
-mp_pose           = mp.solutions.pose
+mp_face_mesh = mp.solutions.face_mesh
+mp_pose = mp.solutions.pose
 
 _fm_front = mp_face_mesh.FaceMesh(
     max_num_faces=1, refine_landmarks=True,
@@ -30,32 +23,32 @@ _pose_side = mp_pose.Pose(
 )
 
 LEFT_EYE  = [362, 385, 387, 263, 373, 380]
-RIGHT_EYE = [33,  160, 158, 133, 153, 144]
+RIGHT_EYE = [33, 160, 158, 133, 153, 144]
 
 NOSE_TIP = 4; CHIN = 152
 LEFT_EYE_L = 263; RIGHT_EYE_R = 33
 LEFT_MOUTH = 287; RIGHT_MOUTH = 57
 
-BLINK_THRESH       = 0.18
-EAR_THRESH         = 0.22
-MIN_BLINK_WINDOW   = 10
-LOW_BLINK_RATE     = 15
-HEAD_PITCH_THRESH  = 25
-HEAD_ROLL_THRESH   = 25
-SHRUG_RATIO        = 0.90
-NECK_ANGLE_THRESH  = 20
+BLINK_THRESH = 0.18
+EAR_THRESH = 0.22
+MIN_BLINK_WINDOW = 10
+LOW_BLINK_RATE = 15
+HEAD_PITCH_THRESH = 25
+HEAD_ROLL_THRESH = 25
+SHRUG_RATIO = 0.90
+NECK_ANGLE_THRESH = 20
 TORSO_ANGLE_THRESH = 15
 
-LOW_EAR_DURATION   = 10
-HEAD_DURATION      = 10
+LOW_EAR_DURATION = 10
+HEAD_DURATION = 10
 LOW_BLINK_DURATION = 10
-SHRUG_DURATION     = 10
-BAD_SIDE_DURATION  = 30
-NOTIF_COOLDOWN     = 60
+SHRUG_DURATION = 10
+BAD_SIDE_DURATION = 30
+NOTIF_COOLDOWN = 60
 
-state_lock       = threading.Lock()
+state_lock = threading.Lock()
 frame_lock_front = threading.Lock()
-frame_lock_side  = threading.Lock()
+frame_lock_side = threading.Lock()
 
 shared_state = {
     "ear": 0.0, "blink_rate": 0.0, "pitch": 0.0, "roll": 0.0,
@@ -68,7 +61,7 @@ shared_state = {
 }
 
 latest_front_frame = None
-latest_side_frame  = None
+latest_side_frame = None
 
 last_notif  = {"ear": 0, "head": 0, "blink": 0, "shrug": 0, "side": 0}
 recal_front = threading.Event()
@@ -152,10 +145,10 @@ def front_capture_thread():
                 time.sleep(0.05); continue
 
             frame = cv2.flip(frame, 1)
-            h, w  = frame.shape[:2]
-            now   = time.time()
+            h, w = frame.shape[:2]
+            now = time.time()
             elapsed = now - start_time
-            rgb   = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             rgb.flags.writeable = False
 
             face_res = _fm_front.process(rgb)
@@ -184,13 +177,13 @@ def front_capture_thread():
                 pitch, _, roll = calc_head_pose(lm, w, h)
                 head_bad = abs(pitch) > HEAD_PITCH_THRESH or abs(roll) > HEAD_ROLL_THRESH
 
-                low_ear_since   = low_ear_since   or now if ear_val < EAR_THRESH else None
-                head_bad_since  = head_bad_since  or now if head_bad              else None
+                low_ear_since = low_ear_since   or now if ear_val < EAR_THRESH else None
+                head_bad_since = head_bad_since  or now if head_bad              else None
                 low_blink_since = low_blink_since or now if (
                     elapsed >= MIN_BLINK_WINDOW and blink_rate < LOW_BLINK_RATE) else None
 
-                low_ear_secs   = (now - low_ear_since)   if low_ear_since   else 0.0
-                head_secs      = (now - head_bad_since)  if head_bad_since  else 0.0
+                low_ear_secs = (now - low_ear_since)   if low_ear_since   else 0.0
+                head_secs = (now - head_bad_since)  if head_bad_since  else 0.0
                 blink_low_secs = (now - low_blink_since) if low_blink_since else 0.0
 
                 # MediaPipe native draws — tessellation + contours + irises
@@ -265,8 +258,8 @@ def front_capture_thread():
             # ── HUD
             ear_col  = (0,220,100) if ear_val>=EAR_THRESH  else (0,200,245) if ear_val>=BLINK_THRESH else (30,30,255)
             blnk_col = (0,220,100) if blink_rate>=15       else (0,200,245) if blink_rate>=10        else (30,30,255)
-            pit_col  = (0,220,100) if abs(pitch)<=25       else (30,30,255)
-            rol_col  = (0,220,100) if abs(roll)<=25        else (30,30,255)
+            pit_col = (0,220,100) if abs(pitch)<=25       else (30,30,255)
+            rol_col = (0,220,100) if abs(roll)<=25        else (30,30,255)
             y = 20
             for text, col in [
                 (f"EAR {ear_val:.3f}", ear_col),
@@ -281,14 +274,14 @@ def front_capture_thread():
 
             with state_lock:
                 s = shared_state
-                s["ear"]              = round(ear_val, 3)
-                s["blink_rate"]       = round(blink_rate, 1)
-                s["pitch"]            = round(pitch, 1)
-                s["roll"]             = round(roll, 1)
-                s["low_ear_secs"]     = round(low_ear_secs, 1)
-                s["head_secs"]        = round(head_secs, 1)
-                s["blink_low_secs"]   = round(blink_low_secs, 1)
-                s["shrug_secs"]       = round(shrug_secs, 1)
+                s["ear"] = round(ear_val, 3)
+                s["blink_rate"] = round(blink_rate, 1)
+                s["pitch"] = round(pitch, 1)
+                s["roll"] = round(roll, 1)
+                s["low_ear_secs"] = round(low_ear_secs, 1)
+                s["head_secs"] = round(head_secs, 1)
+                s["blink_low_secs"] = round(blink_low_secs, 1)
+                s["shrug_secs"] = round(shrug_secs, 1)
                 s["calibrated_front"] = calibrated_front
 
             time.sleep(0.033)
@@ -308,8 +301,8 @@ def side_capture_thread():
                 time.sleep(0.05); continue
 
             h, w = frame.shape[:2]
-            now  = time.time()
-            rgb  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            now = time.time()
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             rgb.flags.writeable = False
             pose_res = _pose_side.process(rgb)
             rgb.flags.writeable = True
@@ -330,13 +323,13 @@ def side_capture_thread():
                 sho_pos = (int(sho_lm.x*w), int(sho_lm.y*h))
                 hip_pos = (int(hip_lm.x*w), int(hip_lm.y*h))
 
-                neck_angle  = calc_angle(ear_pos, sho_pos)
+                neck_angle = calc_angle(ear_pos, sho_pos)
                 torso_angle = calc_angle(sho_pos, hip_pos)
-                bad_side    = (neck_angle > NECK_ANGLE_THRESH or
+                bad_side = (neck_angle > NECK_ANGLE_THRESH or
                                torso_angle > TORSO_ANGLE_THRESH)
 
                 bad_side_since = bad_side_since or now if bad_side else None
-                bad_side_secs  = (now - bad_side_since) if bad_side_since else 0.0
+                bad_side_secs = (now - bad_side_since) if bad_side_since else 0.0
 
                 # MediaPipe native pose skeleton
                 mp_drawing.draw_landmarks(
