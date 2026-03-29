@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AL-I · Adaptive Life Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090d;--surface:#111118;--card:#141420;
+  --border:rgba(100,100,160,.18);--border2:rgba(100,100,160,.32);
+  --text:#d8d8ec;--muted:#5a5a7a;--accent:#5b7fff;
+  --green:#22d3a5;--amber:#f59e0b;--red:#ef4444;
+  --font-ui:'Syne',sans-serif;--font-mono:'Space Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-ui)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.05) 3px,rgba(0,0,0,.05) 4px)}
+
+#shell{display:grid;grid-template-rows:50px 1fr;height:100vh}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  border-bottom:1px solid var(--border);background:rgba(20,20,32,.8);z-index:10}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.logo-sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-family:var(--font-mono)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.pill{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--border2);font-size:10px;font-family:var(--font-mono);color:var(--muted);transition:all .3s}
+.pill.ok  {color:var(--green);border-color:rgba(34,211,165,.3)}
+.pill.warn{color:var(--amber);border-color:rgba(245,158,11,.3)}
+.pill.bad {color:var(--red);border-color:rgba(239,68,68,.3);animation:blink-p 1s infinite}
+@keyframes blink-p{0%,100%{opacity:1}50%{opacity:.5}}
+.pill-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;
+  color:var(--text);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;letter-spacing:.02em}
+.btn:hover{background:rgba(91,127,255,.14);border-color:var(--accent);color:#fff}
+
+main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(--border);overflow:hidden}
+
+.side{background:var(--card);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+  font-family:var(--font-mono);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.mrow{display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;border-bottom:1px solid rgba(100,100,160,.08)}
+.mrow:last-child{border-bottom:none}
+.mlbl{font-size:10px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em}
+.mval{font-size:15px;font-weight:700;color:#fff;font-family:var(--font-mono);transition:color .3s}
+.mval.ok  {color:var(--green)}
+.mval.warn{color:var(--amber)}
+.mval.bad {color:var(--red)}
+.munit{font-size:9px;color:var(--muted);margin-left:2px}
+
+.bar-item{margin-bottom:10px}
+.bar-item:last-child{margin-bottom:0}
+.bar-hdr{display:flex;justify-content:space-between;margin-bottom:4px}
+.bar-name{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-mono)}
+.bar-val{font-size:9px;color:var(--muted);font-family:var(--font-mono)}
+.bar-track{height:3px;border-radius:2px;background:rgba(255,255,255,.07)}
+.bar-fill{height:100%;border-radius:2px;transition:width .35s,background .35s;width:0%}
+
+.al-entry{padding:6px 8px;border-radius:5px;margin-bottom:6px;font-size:10px;line-height:1.5;
+  border-left:2px solid var(--border2);background:rgba(255,255,255,.03);color:var(--muted)}
+.al-entry.active{border-color:var(--red);background:rgba(239,68,68,.08);color:var(--text)}
+.al-entry.ok{border-color:var(--green);background:rgba(34,211,165,.06);color:var(--green)}
+.al-time{font-size:8px;color:var(--muted);font-family:var(--font-mono);margin-top:2px}
+
+#cam-panel{background:#000;display:grid;grid-template-columns:1fr 1fr;gap:1px;position:relative;overflow:hidden}
+
+.cam-slot{position:relative;display:flex;flex-direction:column;overflow:hidden;background:#000}
+.cam-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:20;
+  background:rgba(9,9,13,.75);border:1px solid var(--border2);border-radius:4px;
+  padding:2px 10px;font-size:8px;letter-spacing:.18em;text-transform:uppercase;
+  font-family:var(--font-mono);color:var(--muted);pointer-events:none;white-space:nowrap}
+.cam-label span{color:var(--accent)}
+
+.cam-video-wrap{position:relative;flex:1;overflow:hidden}
+.cam-video-wrap video, .cam-video-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* corner brackets */
+.cam-corner{position:absolute;width:16px;height:16px;border-color:var(--accent);border-style:solid;opacity:.6;z-index:10}
+.cam-corner.tl{top:8px;left:8px;border-width:1.5px 0 0 1.5px}
+.cam-corner.tr{top:8px;right:8px;border-width:1.5px 1.5px 0 0}
+.cam-corner.bl{bottom:8px;left:8px;border-width:0 0 1.5px 1.5px}
+.cam-corner.br{bottom:8px;right:8px;border-width:0 1.5px 1.5px 0}
+
+.cam-hud{position:absolute;bottom:0;left:0;right:0;z-index:15;
+  background:linear-gradient(transparent,rgba(0,0,0,.78));
+  padding:16px 10px 8px;display:flex;gap:6px;flex-wrap:wrap;font-family:var(--font-mono);font-size:9px}
+.hud-chip{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:4px;
+  background:rgba(9,9,13,.7);border:1px solid rgba(100,100,160,.22);color:var(--text)}
+.hk{color:var(--muted);font-size:7px;text-transform:uppercase;letter-spacing:.1em}
+.hv{font-weight:700;font-size:10px;transition:color .3s}
+.hv.ok  {color:var(--green)}
+.hv.warn{color:var(--amber)}
+.hv.bad {color:var(--red)}
+.hsub{font-size:7px;color:var(--muted)}
+
+.no-sig{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;color:var(--muted);font-family:var(--font-mono);font-size:10px;z-index:5}
+.no-sig svg{opacity:.3}
+
+.cal-badge{position:absolute;top:10px;right:8px;z-index:20;
+  font-size:7px;font-family:var(--font-mono);letter-spacing:.12em;
+  padding:2px 6px;border-radius:3px;border:1px solid var(--border2);color:var(--muted)}
+.cal-badge.ok{color:var(--green);border-color:rgba(34,211,165,.3);background:rgba(34,211,165,.08)}
+
+#overlay{position:fixed;inset:0;background:rgba(9,9,13,.92);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:1000;gap:16px;backdrop-filter:blur(4px)}
+#overlay h2{font-size:24px;font-weight:800;color:#fff}
+#overlay p{color:var(--muted);font-size:13px;max-width:340px;text-align:center;line-height:1.7}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-msg{color:var(--red);font-size:11px;font-family:var(--font-mono)}
+
+#toasts{position:fixed;top:58px;right:14px;display:flex;flex-direction:column;gap:7px;z-index:2000;pointer-events:none;max-width:280px}
+.toast{background:var(--card);border:1px solid var(--border2);border-radius:8px;
+  padding:10px 12px;font-size:11px;color:var(--text);pointer-events:auto;animation:tst .25s ease}
+.toast-title{font-weight:700;font-size:10px;letter-spacing:.08em;color:var(--accent);margin-bottom:3px}
+@keyframes tst{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="spinner"></div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:#fff">AL-I</div>
+      <div style="font-size:9px;letter-spacing:.18em;color:var(--muted);font-family:var(--font-mono)">CONNECTING TO BACKEND</div>
+    </div>
+  </div>
+  <p>Start the backend first:<br><code style="color:var(--accent);font-size:12px">python ali_backend.py</code></p>
+  <div id="overlay-err" class="err-msg"></div>
+</div>
+
+<div id="toasts"></div>
+
+<div id="shell">
+  <header>
+    <div class="logo">
+      <div class="pulse"></div>
+      <div class="logo-mark">AL-I</div>
+      <div class="logo-sub">Adaptive Life Intelligence</div>
+    </div>
+    <div class="hdr-right">
+      <div class="pill" id="main-pill"><div class="pill-dot"></div><span id="pill-txt">connecting</span></div>
+      <button class="btn" onclick="recalibrate()">Recalibrate All</button>
+      <button class="btn" id="notif-btn" onclick="reqNotif()">Enable Notifs</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="side">
+      <div class="section">
+        <div class="sec-title">Fatigue <span style="color:var(--accent);margin-left:4px;font-size:7px">MacBook cam</span></div>
+        <div class="mrow"><span class="mlbl">EAR</span><span><span class="mval" id="m-ear">—</span></span></div>
+        <div class="mrow"><span class="mlbl">Blink rate</span><span><span class="mval" id="m-blink">—</span><span class="munit">/min</span></span></div>
+        <div class="mrow"><span class="mlbl">Pitch</span><span><span class="mval" id="m-pitch">—</span><span class="munit">°</span></span></div>
+        <div class="mrow"><span class="mlbl">Roll</span><span><span class="mval" id="m-roll">—</span><span class="munit">°</span></span></div>
+      </div>
+      <div class="section">
+        <div class="sec-title">Posture <span style="color:var(--accent);margin-left:4px;font-size:7px">mixed</span></div>
+        <div class="mrow"><span class="mlbl">Shrug <span style="font-size:7px;color:var(--muted)">(MacBook)</span></span><span><span class="mval" id="m-shrug">—</span><span class="munit">s</span></span></div>
+        <div class="mrow"><span class="mlbl">Neck angle <span style="font-size:7px;color:var(--muted)">(iPhone)</span></span><span><span class="mval" id="m-neck">—</span><span class="munit">°</span></span></div>
+        <div class="mrow"><span class="mlbl">Torso angle <span style="font-size:7px;color:var(--muted)">(iPhone)</span></span><span><span class="mval" id="m-torso">—</span><span class="munit">°</span></span></div>
+      </div>
+      <div class="section" style="flex:1">
+        <div class="sec-title">Durations</div>
+        <div class="bar-item">
+          <div class="bar-hdr"><span class="bar-name">Low EAR</span><span class="bar-val" id="bt-ear">0s / 10s</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-ear"></div></div>
+        </div>
+        <div class="bar-item">
+          <div class="bar-hdr"><span class="bar-name">Head tilt</span><span class="bar-val" id="bt-head">0s / 10s</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-head"></div></div>
+        </div>
+        <div class="bar-item">
+          <div class="bar-hdr"><span class="bar-name">Low blink</span><span class="bar-val" id="bt-blink">0s / 10s</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-blink"></div></div>
+        </div>
+        <div class="bar-item">
+          <div class="bar-hdr"><span class="bar-name">Shrug</span><span class="bar-val" id="bt-shrug">0s / 10s</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-shrug"></div></div>
+        </div>
+        <div class="bar-item">
+          <div class="bar-hdr"><span class="bar-name">Hunching</span><span class="bar-val" id="bt-side">0s / 30s</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-side"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cam-panel">
+
+      <div class="cam-slot" id="slot-front">
+        <div class="cam-label">MacBook · <span>Fatigue + Shrug</span></div>
+        <div class="cal-badge" id="cal-front">calibrating…</div>
+        <div class="cam-video-wrap">
+          <div class="no-sig" id="nosig-front">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="2" y="7" width="20" height="13" rx="2"/><path d="M17 7V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2"/>
+            </svg>
+            Waiting for backend…
+          </div>
+          <img id="feed-front" src="" style="width:100%;height:100%;object-fit:cover;display:none"/>
+        </div>
+        <div class="cam-corner tl"></div><div class="cam-corner tr"></div>
+        <div class="cam-corner bl"></div><div class="cam-corner br"></div>
+        <div class="cam-hud">
+          <div class="hud-chip"><span class="hk">EAR</span>&nbsp;<span class="hv" id="h-ear">—</span></div>
+          <div class="hud-chip"><span class="hk">Blink</span>&nbsp;<span class="hv" id="h-blink">—</span><span class="hsub">/min</span></div>
+          <div class="hud-chip"><span class="hk">Pitch</span>&nbsp;<span class="hv" id="h-pitch">—</span><span class="hsub">°</span></div>
+          <div class="hud-chip"><span class="hk">Shrug</span>&nbsp;<span class="hv" id="h-shrug">—</span><span class="hsub">s</span></div>
+        </div>
+      </div>
+
+      <div class="cam-slot" id="slot-side">
+        <div class="cam-label">iPhone · <span>Side Posture</span></div>
+        <div class="cal-badge" id="cal-side">calibrating…</div>
+        <div class="cam-video-wrap">
+          <div class="no-sig" id="nosig-side">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="2" y="7" width="20" height="13" rx="2"/><path d="M17 7V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2"/>
+            </svg>
+            Waiting for backend…
+          </div>
+          <img id="feed-side" src="" style="width:100%;height:100%;object-fit:cover;display:none"/>
+        </div>
+        <div class="cam-corner tl"></div><div class="cam-corner tr"></div>
+        <div class="cam-corner bl"></div><div class="cam-corner br"></div>
+        <div class="cam-hud">
+          <div class="hud-chip"><span class="hk">Neck</span>&nbsp;<span class="hv" id="h-neck">—</span><span class="hsub">°</span></div>
+          <div class="hud-chip"><span class="hk">Torso</span>&nbsp;<span class="hv" id="h-torso">—</span><span class="hsub">°</span></div>
+          <div class="hud-chip"><span class="hk">Bad posture</span>&nbsp;<span class="hv" id="h-side">—</span><span class="hsub">s</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="side">
+      <div class="section" style="flex:1">
+        <div class="sec-title">Alerts</div>
+        <div id="alert-log"><div class="al-entry">System initialising…</div></div>
+        <div id="cal-note" style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:10px">Waiting for cameras…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:5050';
+
+let notifOk = Notification.permission === 'granted';
+if(notifOk) document.getElementById('notif-btn').textContent = 'Notifs ✓';
+async function reqNotif(){
+  const r = await Notification.requestPermission().catch(()=>'denied');
+  notifOk = r==='granted';
+  document.getElementById('notif-btn').textContent = notifOk ? 'Notifs ✓' : 'Blocked';
+}
+if('serviceWorker' in navigator){
+  const sw=`self.addEventListener('message',e=>{if(e.data&&e.data.t==='N')self.registration.showNotification(e.data.title,{body:e.data.body});});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).then(r=>window._sw=r).catch(()=>{});
+}
+function bgNotify(title,body){
+  if(window._sw?.active){window._sw.active.postMessage({t:'N',title,body});return;}
+  if(notifOk) try{new Notification(title,{body});}catch(e){}
+}
+function toast(title,body){
+  const el=document.createElement('div');
+  el.className='toast';
+  el.innerHTML=`<div class="toast-title">${title}</div>${body}`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),5000);
+}
+
+function startFeeds(){
+  const imgFront = document.getElementById('feed-front');
+  const imgSide  = document.getElementById('feed-side');
+
+  imgFront.src = API + '/feed/front';
+  imgFront.onload = () => {
+    imgFront.style.display = 'block';
+    document.getElementById('nosig-front').style.display = 'none';
+  };
+  imgFront.onerror = () => {
+    imgFront.style.display = 'none';
+    document.getElementById('nosig-front').style.display = 'flex';
+  };
+
+  imgSide.src = API + '/feed/side';
+  imgSide.onload = () => {
+    imgSide.style.display = 'block';
+    document.getElementById('nosig-side').style.display = 'none';
+  };
+  imgSide.onerror = () => {
+    imgSide.style.display = 'none';
+    document.getElementById('nosig-side').style.display = 'flex';
+  };
+}
+
+async function recalibrate(){
+  await fetch(API+'/recalibrate',{method:'POST'}).catch(()=>{});
+  toast('AL-I','Recalibrating both cameras…');
+}
+function setBar(id,secs,max){
+  const r=Math.min(secs/max,1);
+  document.getElementById('bf-'+id).style.width=(r*100).toFixed(1)+'%';
+  document.getElementById('bf-'+id).style.background=r>=1?'var(--red)':r>=.6?'var(--amber)':'var(--green)';
+  document.getElementById('bt-'+id).textContent=Math.round(secs)+'s / '+max+'s';
+}
+function cls(val,okT,warnT){
+  if(isNaN(val)) return '';
+  return val<=okT?'ok':val<=warnT?'warn':'bad';
+}
+function setM(id,txt,c){const e=document.getElementById(id);if(e){e.textContent=txt;e.className='mval '+(c||'');}}
+function setH(id,txt,c){const e=document.getElementById(id);if(e){e.textContent=txt;e.className='hv '+(c||'');}}
+function setStatus(c,t){
+  document.getElementById('main-pill').className='pill '+c;
+  document.getElementById('pill-txt').textContent=t;
+}
+
+let _ak='';
+function updateAlerts(alerts,calFront,calSide){
+  const k=alerts.join('|');
+  if(k!==_ak){
+    _ak=k;
+    const log=document.getElementById('alert-log');
+    log.innerHTML=alerts.length===0
+      ?'<div class="al-entry ok">All clear</div>'
+      :alerts.map(a=>`<div class="al-entry active"><div>${a}</div><div class="al-time">${new Date().toLocaleTimeString()}</div></div>`).join('');
+  }
+  const parts=[];
+  if(!calFront) parts.push('Front: calibrating shrug…');
+  if(!calSide)  parts.push('Side: detecting posture…');
+  document.getElementById('cal-note').textContent = parts.length ? parts.join(' · ') : 'Both cameras calibrated ✓';
+
+  const fb = document.getElementById('cal-front');
+  fb.textContent = calFront ? 'calibrated ✓' : 'calibrating…';
+  fb.className   = 'cal-badge' + (calFront?' ok':'');
+  const sb = document.getElementById('cal-side');
+  sb.textContent = calSide  ? 'calibrated ✓' : 'calibrating…';
+  sb.className   = 'cal-badge' + (calSide?' ok':'');
+}
+
+const _seen=new Set();
+const _nm={
+  low_ear:   ['AL-I · Eye Strain','Your eyes are narrowing — you may be fatigued.'],
+  head_tilt: ['AL-I · Head Tilt', 'Head tilt detected. Adjust your position.'],
+  low_blink: ['AL-I · Blink Rate','Low blink rate — blink more often.'],
+  shrug:     ['AL-I · Posture',   'Shoulders too high. Relax them.'],
+  hunching:  ['AL-I · Posture',   'You are hunching. Sit up straight.'],
+};
+function handleNotifs(ns){
+  (ns||[]).forEach(k=>{
+    const ts=k+'_'+Math.floor(Date.now()/60000);
+    if(_seen.has(ts)) return; _seen.add(ts);
+    const[title,body]=_nm[k]||['AL-I',k];
+    bgNotify(title,body); toast(title,body);
+  });
+}
+
+function connect(){
+  const es=new EventSource(API+'/stream');
+  es.onopen=()=>{
+    document.getElementById('overlay').style.display='none';
+    setStatus('ok','connected');
+    startFeeds();
+  };
+  es.onmessage=ev=>{
+    let d; try{d=JSON.parse(ev.data);}catch{return;}
+
+    const earC  = d.ear>=0.22?'ok':d.ear>=0.18?'warn':'bad';
+    const blkC  = d.blink_rate>=15?'ok':d.blink_rate>=10?'warn':'bad';
+    const pitC  = cls(Math.abs(d.pitch),25,40);
+    const nkC   = cls(d.neck_angle,20,30);
+    const toC   = cls(d.torso_angle,15,25);
+    const shC   = d.shrug_secs>10?'bad':d.shrug_secs>5?'warn':'ok';
+    const sdC   = d.bad_side_secs>30?'bad':d.bad_side_secs>15?'warn':'ok';
+
+    // left panel
+    setM('m-ear',   d.ear.toFixed(3),             earC);
+    setM('m-blink', d.blink_rate.toFixed(1),      blkC);
+    setM('m-pitch', Math.abs(d.pitch).toFixed(1), pitC);
+    setM('m-roll',  Math.abs(d.roll).toFixed(1),  cls(Math.abs(d.roll),25,40));
+    setM('m-shrug', d.shrug_secs.toFixed(1),      shC);
+    setM('m-neck',  d.neck_angle.toFixed(1),      nkC);
+    setM('m-torso', d.torso_angle.toFixed(1),     toC);
+
+    // front HUD
+    setH('h-ear',   d.ear.toFixed(3),             earC);
+    setH('h-blink', d.blink_rate.toFixed(1),      blkC);
+    setH('h-pitch', Math.abs(d.pitch).toFixed(1), pitC);
+    setH('h-shrug', d.shrug_secs.toFixed(1),      shC);
+
+    // side HUD
+    setH('h-neck',  d.neck_angle.toFixed(1),  nkC);
+    setH('h-torso', d.torso_angle.toFixed(1), toC);
+    setH('h-side',  d.bad_side_secs.toFixed(1),sdC);
+
+    // bars
+    setBar('ear',   d.low_ear_secs,   10);
+    setBar('head',  d.head_secs,      10);
+    setBar('blink', d.blink_low_secs, 10);
+    setBar('shrug', d.shrug_secs,     10);
+    setBar('side',  d.bad_side_secs,  30);
+
+    const any = d.fatigue_alert||d.posture_alert||d.side_posture_alert;
+    setStatus(any?'bad':'ok', any?'alert active':'all clear');
+    updateAlerts(d.alerts, d.calibrated_front, d.calibrated_side);
+    handleNotifs(d.notifications);
+  };
+  es.onerror=()=>{
+    setStatus('warn','reconnecting…');
+    document.getElementById('overlay').style.display='flex';
+    document.getElementById('overlay-err').textContent='Lost connection — retrying…';
+    es.close(); setTimeout(connect,3000);
+  };
+}
+
+window.addEventListener('load',()=>{
+  if(Notification.permission==='default') setTimeout(reqNotif,1500);
+  connect();
+});
+</script>
+</body>
+</html>
