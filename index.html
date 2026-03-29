@@ -6,6 +6,7 @@
 <title>AL-I · Adaptive Life Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -57,6 +58,12 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
 .mval.warn{color:var(--amber)}
 .mval.bad {color:var(--red)}
 .munit{font-size:9px;color:var(--muted);margin-left:2px}
+
+.chart-container {
+  margin-top: 10px;
+  height: 80px;
+  width: 100%;
+}
 
 .bar-item{margin-bottom:10px}
 .bar-item:last-child{margin-bottom:0}
@@ -162,6 +169,11 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
       <div class="section">
         <div class="sec-title">Fatigue <span style="color:var(--accent);margin-left:4px;font-size:7px">MacBook cam</span></div>
         <div class="mrow"><span class="mlbl">EAR</span><span><span class="mval" id="m-ear">—</span></span></div>
+        
+        <div class="chart-container">
+          <canvas id="earChart"></canvas>
+        </div>
+
         <div class="mrow"><span class="mlbl">Blink rate</span><span><span class="mval" id="m-blink">—</span><span class="munit">/min</span></span></div>
         <div class="mrow"><span class="mlbl">Pitch</span><span><span class="mval" id="m-pitch">—</span><span class="munit">°</span></span></div>
         <div class="mrow"><span class="mlbl">Roll</span><span><span class="mval" id="m-roll">—</span><span class="munit">°</span></span></div>
@@ -256,6 +268,51 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
 
 <script>
 const API = 'http://127.0.0.1:5050';
+
+// Initialize EAR Chart
+let earChart;
+function initChart() {
+  const ctx = document.getElementById('earChart').getContext('2d');
+  earChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array(30).fill(''),
+      datasets: [{
+        label: 'EAR',
+        data: Array(30).fill(null),
+        borderColor: '#5b7fff',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: 'rgba(91, 127, 255, 0.1)',
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { 
+          min: 0.1, max: 0.4, 
+          ticks: { color: '#5a5a7a', font: { size: 8, family: 'Space Mono' } },
+          grid: { color: 'rgba(100,100,160,0.1)' }
+        }
+      }
+    }
+  });
+}
+
+function updateChart(val) {
+  if (!earChart) return;
+  earChart.data.datasets[0].data.push(val);
+  earChart.data.datasets[0].data.shift();
+  
+  // Color the line red if below threshold
+  earChart.data.datasets[0].borderColor = val < 0.22 ? '#ef4444' : '#5b7fff';
+  earChart.update('none'); // Update without animation for performance
+}
 
 let notifOk = Notification.permission === 'granted';
 if(notifOk) document.getElementById('notif-btn').textContent = 'Notifs ✓';
@@ -384,6 +441,9 @@ function connect(){
     const shC   = d.shrug_secs>10?'bad':d.shrug_secs>5?'warn':'ok';
     const sdC   = d.bad_side_secs>30?'bad':d.bad_side_secs>15?'warn':'ok';
 
+    // Update real-time chart
+    updateChart(d.ear);
+
     // left panel
     setM('m-ear',   d.ear.toFixed(3),             earC);
     setM('m-blink', d.blink_rate.toFixed(1),      blkC);
@@ -425,6 +485,7 @@ function connect(){
 }
 
 window.addEventListener('load',()=>{
+  initChart();
   if(Notification.permission==='default') setTimeout(reqNotif,1500);
   connect();
 });
