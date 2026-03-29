@@ -60,8 +60,8 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
 .munit{font-size:9px;color:var(--muted);margin-left:2px}
 
 .chart-container {
-  margin-top: 10px;
-  height: 80px;
+  margin: 8px 0 12px 0;
+  height: 60px;
   width: 100%;
 }
 
@@ -91,7 +91,6 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
 .cam-video-wrap{position:relative;flex:1;overflow:hidden}
 .cam-video-wrap video, .cam-video-wrap img{width:100%;height:100%;object-fit:cover;display:block}
 
-/* corner brackets */
 .cam-corner{position:absolute;width:16px;height:16px;border-color:var(--accent);border-style:solid;opacity:.6;z-index:10}
 .cam-corner.tl{top:8px;left:8px;border-width:1.5px 0 0 1.5px}
 .cam-corner.tr{top:8px;right:8px;border-width:1.5px 1.5px 0 0}
@@ -169,20 +168,18 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
       <div class="section">
         <div class="sec-title">Fatigue <span style="color:var(--accent);margin-left:4px;font-size:7px">MacBook cam</span></div>
         <div class="mrow"><span class="mlbl">EAR</span><span><span class="mval" id="m-ear">—</span></span></div>
+        <div class="chart-container"><canvas id="earChart"></canvas></div>
         
-        <div class="chart-container">
-          <canvas id="earChart"></canvas>
-        </div>
-
         <div class="mrow"><span class="mlbl">Blink rate</span><span><span class="mval" id="m-blink">—</span><span class="munit">/min</span></span></div>
         <div class="mrow"><span class="mlbl">Pitch</span><span><span class="mval" id="m-pitch">—</span><span class="munit">°</span></span></div>
-        <div class="mrow"><span class="mlbl">Roll</span><span><span class="mval" id="m-roll">—</span><span class="munit">°</span></span></div>
       </div>
       <div class="section">
-        <div class="sec-title">Posture <span style="color:var(--accent);margin-left:4px;font-size:7px">mixed</span></div>
-        <div class="mrow"><span class="mlbl">Shrug <span style="font-size:7px;color:var(--muted)">(MacBook)</span></span><span><span class="mval" id="m-shrug">—</span><span class="munit">s</span></span></div>
-        <div class="mrow"><span class="mlbl">Neck angle <span style="font-size:7px;color:var(--muted)">(iPhone)</span></span><span><span class="mval" id="m-neck">—</span><span class="munit">°</span></span></div>
-        <div class="mrow"><span class="mlbl">Torso angle <span style="font-size:7px;color:var(--muted)">(iPhone)</span></span><span><span class="mval" id="m-torso">—</span><span class="munit">°</span></span></div>
+        <div class="sec-title">Posture <span style="color:var(--accent);margin-left:4px;font-size:7px">iPhone cam</span></div>
+        <div class="mrow"><span class="mlbl">Neck angle</span><span><span class="mval" id="m-neck">—</span><span class="munit">°</span></span></div>
+        <div class="chart-container"><canvas id="neckChart"></canvas></div>
+        
+        <div class="mrow"><span class="mlbl">Torso angle</span><span><span class="mval" id="m-torso">—</span><span class="munit">°</span></span></div>
+        <div class="mrow"><span class="mlbl">Shrug</span><span><span class="mval" id="m-shrug">—</span><span class="munit">s</span></span></div>
       </div>
       <div class="section" style="flex:1">
         <div class="sec-title">Durations</div>
@@ -210,7 +207,6 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
     </div>
 
     <div id="cam-panel">
-
       <div class="cam-slot" id="slot-front">
         <div class="cam-label">MacBook · <span>Fatigue + Shrug</span></div>
         <div class="cal-badge" id="cal-front">calibrating…</div>
@@ -253,7 +249,6 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
           <div class="hud-chip"><span class="hk">Bad posture</span>&nbsp;<span class="hv" id="h-side">—</span><span class="hsub">s</span></div>
         </div>
       </div>
-
     </div>
 
     <div class="side">
@@ -269,51 +264,67 @@ main{display:grid;grid-template-columns:210px 1fr 210px;gap:1px;background:var(-
 <script>
 const API = 'http://127.0.0.1:5050';
 
-// Initialize EAR Chart
-let earChart;
-function initChart() {
-  const ctx = document.getElementById('earChart').getContext('2d');
-  earChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: Array(30).fill(''),
-      datasets: [{
-        label: 'EAR',
-        data: Array(30).fill(null),
-        borderColor: '#5b7fff',
-        borderWidth: 2,
-        pointRadius: 0,
-        fill: true,
-        backgroundColor: 'rgba(91, 127, 255, 0.1)',
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { display: false },
-        y: { 
-          min: 0.1, max: 0.4, 
-          ticks: { color: '#5a5a7a', font: { size: 8, family: 'Space Mono' } },
-          grid: { color: 'rgba(100,100,160,0.1)' }
-        }
+// Initialize Charts
+let earChart, neckChart;
+function initCharts() {
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: { 
+        ticks: { color: '#5a5a7a', font: { size: 8, family: 'Space Mono' } },
+        grid: { color: 'rgba(100,100,160,0.1)' }
       }
     }
+  };
+
+  // EAR Chart
+  earChart = new Chart(document.getElementById('earChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: Array(40).fill(''),
+      datasets: [{
+        label: 'EAR', data: Array(40).fill(null),
+        borderColor: '#5b7fff', borderWidth: 2, pointRadius: 0,
+        fill: true, backgroundColor: 'rgba(91, 127, 255, 0.05)', tension: 0.4
+      }]
+    },
+    options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0.1, max: 0.4 } } }
+  });
+
+  // Neck Angle Chart
+  neckChart = new Chart(document.getElementById('neckChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: Array(40).fill(''),
+      datasets: [{
+        label: 'Neck', data: Array(40).fill(null),
+        borderColor: '#22d3a5', borderWidth: 2, pointRadius: 0,
+        fill: true, backgroundColor: 'rgba(34, 211, 165, 0.05)', tension: 0.4
+      }]
+    },
+    options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 60 } } }
   });
 }
 
-function updateChart(val) {
-  if (!earChart) return;
-  earChart.data.datasets[0].data.push(val);
-  earChart.data.datasets[0].data.shift();
-  
-  // Color the line red if below threshold
-  earChart.data.datasets[0].borderColor = val < 0.22 ? '#ef4444' : '#5b7fff';
-  earChart.update('none'); // Update without animation for performance
+function updateCharts(ear, neck) {
+  if (earChart) {
+    earChart.data.datasets[0].data.push(ear);
+    earChart.data.datasets[0].data.shift();
+    earChart.data.datasets[0].borderColor = ear < 0.22 ? '#ef4444' : '#5b7fff';
+    earChart.update('none');
+  }
+  if (neckChart) {
+    neckChart.data.datasets[0].data.push(neck);
+    neckChart.data.datasets[0].data.shift();
+    neckChart.data.datasets[0].borderColor = neck > 30 ? '#ef4444' : '#22d3a5';
+    neckChart.update('none');
+  }
 }
 
+// Notification & UI Logic
 let notifOk = Notification.permission === 'granted';
 if(notifOk) document.getElementById('notif-btn').textContent = 'Notifs ✓';
 async function reqNotif(){
@@ -340,26 +351,10 @@ function toast(title,body){
 function startFeeds(){
   const imgFront = document.getElementById('feed-front');
   const imgSide  = document.getElementById('feed-side');
-
   imgFront.src = API + '/feed/front';
-  imgFront.onload = () => {
-    imgFront.style.display = 'block';
-    document.getElementById('nosig-front').style.display = 'none';
-  };
-  imgFront.onerror = () => {
-    imgFront.style.display = 'none';
-    document.getElementById('nosig-front').style.display = 'flex';
-  };
-
+  imgFront.onload = () => { imgFront.style.display = 'block'; document.getElementById('nosig-front').style.display = 'none'; };
   imgSide.src = API + '/feed/side';
-  imgSide.onload = () => {
-    imgSide.style.display = 'block';
-    document.getElementById('nosig-side').style.display = 'none';
-  };
-  imgSide.onerror = () => {
-    imgSide.style.display = 'none';
-    document.getElementById('nosig-side').style.display = 'flex';
-  };
+  imgSide.onload = () => { imgSide.style.display = 'block'; document.getElementById('nosig-side').style.display = 'none'; };
 }
 
 async function recalibrate(){
@@ -397,13 +392,13 @@ function updateAlerts(alerts,calFront,calSide){
   if(!calFront) parts.push('Front: calibrating shrug…');
   if(!calSide)  parts.push('Side: detecting posture…');
   document.getElementById('cal-note').textContent = parts.length ? parts.join(' · ') : 'Both cameras calibrated ✓';
-
+  
   const fb = document.getElementById('cal-front');
   fb.textContent = calFront ? 'calibrated ✓' : 'calibrating…';
-  fb.className   = 'cal-badge' + (calFront?' ok':'');
+  fb.className = 'cal-badge' + (calFront?' ok':'');
   const sb = document.getElementById('cal-side');
-  sb.textContent = calSide  ? 'calibrated ✓' : 'calibrating…';
-  sb.className   = 'cal-badge' + (calSide?' ok':'');
+  sb.textContent = calSide ? 'calibrated ✓' : 'calibrating…';
+  sb.className = 'cal-badge' + (calSide?' ok':'');
 }
 
 const _seen=new Set();
@@ -439,32 +434,23 @@ function connect(){
     const nkC   = cls(d.neck_angle,20,30);
     const toC   = cls(d.torso_angle,15,25);
     const shC   = d.shrug_secs>10?'bad':d.shrug_secs>5?'warn':'ok';
-    const sdC   = d.bad_side_secs>30?'bad':d.bad_side_secs>15?'warn':'ok';
 
-    // Update real-time chart
-    updateChart(d.ear);
+    updateCharts(d.ear, d.neck_angle);
 
-    // left panel
     setM('m-ear',   d.ear.toFixed(3),             earC);
     setM('m-blink', d.blink_rate.toFixed(1),      blkC);
     setM('m-pitch', Math.abs(d.pitch).toFixed(1), pitC);
-    setM('m-roll',  Math.abs(d.roll).toFixed(1),  cls(Math.abs(d.roll),25,40));
     setM('m-shrug', d.shrug_secs.toFixed(1),      shC);
     setM('m-neck',  d.neck_angle.toFixed(1),      nkC);
     setM('m-torso', d.torso_angle.toFixed(1),     toC);
 
-    // front HUD
     setH('h-ear',   d.ear.toFixed(3),             earC);
     setH('h-blink', d.blink_rate.toFixed(1),      blkC);
-    setH('h-pitch', Math.abs(d.pitch).toFixed(1), pitC);
     setH('h-shrug', d.shrug_secs.toFixed(1),      shC);
+    setH('h-neck',  d.neck_angle.toFixed(1),      nkC);
+    setH('h-torso', d.torso_angle.toFixed(1),     toC);
+    setH('h-side',  d.bad_side_secs.toFixed(1),   d.bad_side_secs>30?'bad':d.bad_side_secs>15?'warn':'ok');
 
-    // side HUD
-    setH('h-neck',  d.neck_angle.toFixed(1),  nkC);
-    setH('h-torso', d.torso_angle.toFixed(1), toC);
-    setH('h-side',  d.bad_side_secs.toFixed(1),sdC);
-
-    // bars
     setBar('ear',   d.low_ear_secs,   10);
     setBar('head',  d.head_secs,      10);
     setBar('blink', d.blink_low_secs, 10);
@@ -479,13 +465,12 @@ function connect(){
   es.onerror=()=>{
     setStatus('warn','reconnecting…');
     document.getElementById('overlay').style.display='flex';
-    document.getElementById('overlay-err').textContent='Lost connection — retrying…';
     es.close(); setTimeout(connect,3000);
   };
 }
 
 window.addEventListener('load',()=>{
-  initChart();
+  initCharts();
   if(Notification.permission==='default') setTimeout(reqNotif,1500);
   connect();
 });
